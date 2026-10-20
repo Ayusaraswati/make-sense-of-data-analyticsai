@@ -1,0 +1,42 @@
+import pandas as pd
+import numpy as np
+import os
+
+def preprocess_data(output_data_path):
+    print("==================================================")
+    print("📌 STEP 1: Memuat Data Mentah Transaksi PT Maju Bersama")
+    print("==================================================")
+
+    # Simulasi data mentah perusahaan
+    data = {
+        'invoice_id': ['INV-1001', 'INV-1002', 'INV-1003', 'INV-1004', 'INV-1005'],
+        'customer_id': ['CUST-01', 'CUST-02', 'CUST-03', 'CUST-01', 'CUST-04'],
+        'order_date': ['2026-01-10', '2026-01-12', '2026-01-15', '2026-01-20', '2026-01-21'],
+        'shipping_date': ['2026-01-11', '2026-01-10', '2026-01-16', '2026-01-22', '2026-01-19'],
+        'order_amount': [15000000, 23000000, 5000000, 42000000, 11000000],
+        'discount_given': [0.05, 0.35, 0.10, 0.02, 0.40],
+        'late_payment': [0, 1, 0, 1, 1]
+    }
+
+    df = pd.DataFrame(data)
+    print(f"Total Baris Data Mentah: {len(df)}")
+
+    # Konversi format tanggal
+    df['order_date'] = pd.to_datetime(df['order_date'])
+    df['shipping_date'] = pd.to_datetime(df['shipping_date'])
+
+    # Menangani anomali bisnis (shipping_date < order_date)
+    shipping_anomaly = df['shipping_date'] < df['order_date']
+    if shipping_anomaly.sum() > 0:
+        df.loc[shipping_anomaly, 'shipping_date'] = df.loc[shipping_anomaly, 'order_date'] + pd.Timedelta(days=1)
+
+    # Pencegahan Data Leakage (membuang kolom identitas/masa depan)
+    leakage_columns = ['invoice_id', 'shipping_date', 'order_date']
+    df_cleaned = df.drop(columns=leakage_columns)
+
+    os.makedirs(os.path.dirname(output_data_path), exist_ok=True)
+    df_cleaned.to_csv(output_data_path, index=False)
+    print(f"✅ Preprocessing selesai! Data disimpan di: {output_data_path}")
+
+if __name__ == "__main__":
+    preprocess_data("data/cleaned_sales_data.csv")
